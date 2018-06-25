@@ -195,6 +195,8 @@ class C1964jsVideoHLE
     @makeUcodeMap()
     @crcTable = @makeCRCTable()
 
+    @vertexMult = 0
+
     @vertexMultVals = [
       10, # ucode 0 - Mario
       2,  # ucode 1 - GBI1
@@ -213,11 +215,10 @@ class C1964jsVideoHLE
       2,  # ucode 14 - OgreBattle Background
       10, # ucode 15 - ucode 0 with sprite2D
       5,  # ucode 16 - Star War, Shadow of Empire
-
       2,  # ucode 17 - Star Wars - Rogue Squadron, 
       2,  # ucode 18 - World Driver Championship, check me here
       2,  # ucode 19 - Last Legion UX, check me here
-      2,  # ucode 20 - ZSortp
+      2   # ucode 20 - ZSortp
     ]
     return
 
@@ -454,19 +455,18 @@ class C1964jsVideoHLE
         # check for 'R' 'S' 'P' ("RSP") ascii 82, 83, 80
         if @core.memory.readRdram8(base + i) is 82 and @core.memory.readRdram8(base + i + 1) is 83 and @core.memory.readRdram8(base + i + 2) is 80
           #concat chars (32 is ascii for space character)
-          while @core.memory.u8[ base + (i ^ 3) ] >= 32
-            str += String.fromCharCode(@core.memory.u8[ base + (i ^ 3) ])
+          while @core.memory.readRdram8(base + i) >= 32
+            str += String.fromCharCode(@core.memory.readRdram8(base + i))
             i++
           crcSize = @computeCRC32 0, start, 8
           crc800 = @computeCRC32 0, start, 0x800
           ucode = @DLParser_IdentifyUcode crc800
-          if ucode != -1 
-            console.log "Detected microcode " + ucode
-          else
-            console.log "Unknown ucode. Using microcode #5"
-            ucode = 5
-          @RDP_SetUcodeMap ucode
           break
+    if ucode != -1 
+      console.log "Detected microcode " + ucode
+    else
+      console.log "Unknown ucode. Using microcode #5"
+      ucode = 5
     return ucode
 
   RDP_SetUcodeMap: (ucode) ->
@@ -508,7 +508,7 @@ class C1964jsVideoHLE
     @core.interrupts.triggerDPInterrupt 0, false
     return
 
-  videoLog : (msg) ->
+  videoLog: (msg) ->
     #console.log msg
     return
 
@@ -521,6 +521,8 @@ class C1964jsVideoHLE
       tUcodeDataSize = @core.memory.getInt32(@core.memory.spMemUint8Array, consts.TASK_MICROCODE_DATA_SIZE, @core.memory.spMemUint32Array)
 
       @ucode = @DLParser_CheckUCode tUcode, tUcodeData, tUcodeSize, tUcodeDataSize
+      @RDP_SetUcodeMap @ucode
+      @vertexMult = 1.0 / @vertexMultVals[@ucode]
       @currentMicrocodeMap = @microcodeMap0 # to only execute this once
     return
 
@@ -757,43 +759,42 @@ class C1964jsVideoHLE
     return
 
   RSP_GBI1_Vtx: (pc) ->
-    num = @getGbi1NumVertices(pc) + 1
+    num = @getGbi1NumVertices(pc)
     v0 = @getGbi1Vertex0(pc)
     seg = @getGbi0DlistAddr(pc)
     addr = @getRspSegmentAddr(seg)
-    num = 32 - v0  if (v0 + num) > @MAX_VERTICES
+    return  if (v0 + num) > @MAX_VERTICES
 
     #Check that the address is valid
-    if (addr + num*16) > @core.currentRdramSize
+    if addr > @core.currentRdramSize
       console.warn "vertex is beyond ram size"
     else
       @processVertexData addr, v0, num
     return
 
   RSP_GBI1_Sprite2DBase: (pc) ->
-    alert "todo: RSP_GBI1_Sprite2DBase"
+    @videoLog  "todo: RSP_GBI1_Sprite2DBase"
     return
 
   RSP_GBI1_LoadUCode: (pc) ->
-    alert "todo: RSP_GBI1_LoadUCode"
+    @videoLog  "todo: RSP_GBI1_LoadUCode"
     return
 
   RSP_GBI1_BranchZ: (pc) ->
-    alert "todo: RSP_GBI1_BranchZ"
+    @videoLog  "todo: RSP_GBI1_BranchZ"
     return
 
   RSP_GBI1_Tri2: (pc) ->
-    alert "todo: RSP_GBI1_Tri2"
+    @videoLog  "todo: RSP_GBI1_Tri2"
     return
 
   RSP_GBI1_ModifyVtx: (pc) ->
-    alert "todo: RSP_GBI1_ModifyVtx"
+    @videoLog  "todo: RSP_GBI1_ModifyVtx"
     return
 
   RSP_S2DEX_SPObjLoadTxtr_Ucode1: (pc) ->
-    alert "todo: RSP_S2DEX_SPObjLoadTxtr_Ucode1"
+    @videoLog  "todo: RSP_S2DEX_SPObjLoadTxtr_Ucode1"
     return
-
 
   processLights: (vo, i, a, sMult, tMult) ->
     `const n = this.normalMat`
@@ -1291,7 +1292,7 @@ class C1964jsVideoHLE
     return
 
   RSP_GBI1_Tri1: (pc) ->
-    mult = 1.0 / @vertexMultVals[@ucode]
+    mult = @vertexMult
     v0 = @getGbi0Tri1V0(pc) * mult
     v1 = @getGbi0Tri1V1(pc) * mult
     v2 = @getGbi0Tri1V2(pc) * mult
