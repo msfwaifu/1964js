@@ -785,7 +785,33 @@ class C1964jsVideoHLE
     return
 
   RSP_GBI1_Tri2: (pc) ->
-    @videoLog  "todo: RSP_GBI1_Tri2"
+    mult = @vertexMult
+    v0 = @getGbi0Tri1V0(pc) * mult
+    v1 = @getGbi0Tri1V1(pc) * mult
+    v2 = @getGbi0Tri1V2(pc) * mult
+    #flag = @getGbi0Tri1Flag(pc)
+    didSucceed = @prepareTriangle v0, v1, v2
+
+    if didSucceed is false
+      return
+
+    v3 = @getGbi1Tri2V3(pc) * mult
+    v4 = @getGbi1Tri2V4(pc) * mult
+    v5 = @getGbi1Tri2V5(pc) * mult
+    #flag = @getGbi0Tri1Flag(pc)
+    didSucceed = @prepareTriangle v3, v4, v5
+
+    if didSucceed is false
+      return
+
+    pc = @dlistStack[@dlistStackPointer].pc
+    cmd = @getCommand(pc)
+    func = @currentMicrocodeMap[cmd]
+    if func is @RSP_GBI1_Tri2
+      return #loops until not tri2, then it will drawScene
+
+    if @renderStateChanged is true
+      @drawScene false, @activeTile
     return
 
   RSP_GBI1_ModifyVtx: (pc) ->

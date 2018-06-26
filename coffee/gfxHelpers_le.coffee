@@ -76,6 +76,16 @@ C1964jsVideoHLEle::getGbi0Tri1V1 = (pc) ->
 C1964jsVideoHLEle::getGbi0Tri1V2 = (pc) ->
   @core.memory.u8[pc+4]
 
+#GBI1 Tri2 struct
+C1964jsVideoHLEle::getGbi1Tri2V3 = (pc) ->
+  @core.memory.u8[pc+2]
+
+C1964jsVideoHLEle::getGbi1Tri2V4 = (pc) ->
+  @core.memory.u8[pc+1]
+
+C1964jsVideoHLEle::getGbi1Tri2V5 = (pc) ->
+  @core.memory.u8[pc]
+
 
 #GBI0 vertex struct
 C1964jsVideoHLEle::getGbi0NumVertices = (pc) ->
